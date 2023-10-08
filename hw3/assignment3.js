@@ -78,11 +78,13 @@ app.post('/users', async (req, res) => {
         user_id = rowCount;
 
         // 調整response的時間格式
-        const formattedTime = moment(req.timestamp).tz('Asia/Taipei').format('ddd, DD MMM YYYY HH:mm:ss [GMT]');
-        console.log('現在的時間是: ',formattedTime);
+        // const formattedTime = moment(req.timestamp).tz('Asia/Taipei').format('ddd, DD MMM YYYY HH:mm:ss [GMT]');
+        // console.log('現在的時間是: ',formattedTime);
+        const request_time = req.headers['request-date'];
+        console.log(request_time);
 
         // 把value收集好準備放入資料庫
-        const values = [user_id, name, email, password, formattedTime];
+        const values = [user_id, name, email, password, request_time];
 
         // 執行DB Insert操作
         await insertUserToDatabase(values);
@@ -94,7 +96,7 @@ app.post('/users', async (req, res) => {
                     name: req.body.name,
                     email: req.body.email,
                 },
-                'request-date': formattedTime,
+                'request-date': request_time,
             },
         };
 
@@ -128,7 +130,7 @@ async function getUserCountFromDatabase() {
     return new Promise((resolve, reject) => {
         db.query(query, (queryError, results) => {
             if (queryError) {
-                console.error('查询失败:', queryError);
+                console.error('查詢失敗:', queryError);
                 reject(queryError);
             } else {
                 const rowCount = results[0].row_count;
@@ -166,12 +168,23 @@ app.get('/users', async (req, res) => {
 
     try {
         const user = await getUserInfoById(userId);
-        console.log(user);
+        //console.log(user);
         if (!user) {
             return res.status(403).json({ error: 'User Not Existing' });
         }
 
-        res.status(200).json({ user })
+        const data = {
+            "data": {
+                "user" :{
+                    "id": parseInt(req.query.id, 10),
+                    "name": user.name,
+                    "email" : user.email,
+                },
+                "request-date": req.headers['request-date']
+            }
+        }
+        console.log(data);
+        res.status(200).json(data)
 
     }
     catch (error) {
